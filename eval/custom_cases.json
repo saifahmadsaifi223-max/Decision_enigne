@@ -1,0 +1,31 @@
+[
+  {
+    "case_id": "CUST-001",
+    "policy_id": "USGIC-CSC-2017-2018",
+    "policy_start_date": "2024-01-01",
+    "claim_date": "2026-09-14",
+    "sum_insured_inr": 500000,
+    "continuous_coverage_months": 32,
+    "prior_insurer_continuous_years": 0,
+    "patient": { "age": 45 },
+    "hospital": { "name": "TODO", "network_provider": true },
+    "treatment": {
+      "type": "inpatient",
+      "admission_hours": 96,
+      "diagnosis": "TODO -- e.g. a mixed case with one covered and one excluded line item",
+      "procedure": "TODO",
+      "pre_existing": false,
+      "experimental": false
+    },
+    "expenses_inr": {
+      "room": 0,
+      "doctor_fees": 0,
+      "medicines_diagnostics": 0,
+      "pre_hospitalization": 0,
+      "post_hospitalization": 0,
+      "ambulance": 0
+    },
+    "documents": ["claim_form", "discharge_summary", "itemized_bill"],
+    "task": "TODO -- describe what this case is designed to test, e.g. PARTIALLY_ADMISSIBLE where dental treatment is billed alongside a covered accident-related surgery"
+  }
+]
