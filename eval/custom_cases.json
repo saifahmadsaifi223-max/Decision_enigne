@@ -2,30 +2,157 @@
   {
     "case_id": "CUST-001",
     "policy_id": "USGIC-CSC-2017-2018",
-    "policy_start_date": "2024-01-01",
-    "claim_date": "2026-09-14",
+    "policy_start_date": "2023-06-01",
+    "claim_date": "2026-08-01",
     "sum_insured_inr": 500000,
-    "continuous_coverage_months": 32,
+    "continuous_coverage_months": 38,
     "prior_insurer_continuous_years": 0,
-    "patient": { "age": 45 },
-    "hospital": { "name": "TODO", "network_provider": true },
+    "patient": { "age": 27 },
+    "hospital": { "name": "City Trauma Centre", "network_provider": true },
     "treatment": {
       "type": "inpatient",
       "admission_hours": 96,
-      "diagnosis": "TODO -- e.g. a mixed case with one covered and one excluded line item",
-      "procedure": "TODO",
+      "diagnosis": "Tibia fracture and dental injury from road traffic accident",
+      "procedure": "Internal fixation of tibia; dental restoration for chipped teeth",
+      "pre_existing": false,
+      "experimental": false
+    },
+    "expenses_inr": {
+      "room": 25000,
+      "doctor_fees": 60000,
+      "medicines_diagnostics": 85000,
+      "pre_hospitalization": 3000,
+      "post_hospitalization": 5000,
+      "ambulance": 2000
+    },
+    "documents": ["claim_form", "discharge_summary", "itemized_bill", "doctor_prescription", "accident_report"],
+    "task": "Assess whether the combined claim (fracture treatment + dental restoration, both arising from the same accident) is fully, partially, or not admissible. Determine whether the dental component's accident origin changes its exclusion status."
+  },
+  {
+    "case_id": "CUST-002",
+    "policy_id": "USGIC-CSC-2017-2018",
+    "policy_start_date": "2022-03-01",
+    "claim_date": "2026-08-20",
+    "sum_insured_inr": 300000,
+    "continuous_coverage_months": 41,
+    "prior_insurer_continuous_years": 0,
+    "patient": { "age": 58 },
+    "hospital": { "name": "National Transplant Institute", "network_provider": true },
+    "treatment": {
+      "type": "inpatient",
+      "admission_hours": 96,
+      "diagnosis": "Post-transplant complication management (kidney)",
+      "procedure": "Complication management following renal transplant",
+      "pre_existing": false,
+      "experimental": false
+    },
+    "expenses_inr": {
+      "room": 20000,
+      "doctor_fees": 150000,
+      "medicines_diagnostics": 250000,
+      "pre_hospitalization": 12000,
+      "post_hospitalization": 18000,
+      "ambulance": 0
+    },
+    "documents": ["claim_form", "discharge_summary", "itemized_bill", "specialist_report"],
+    "task": "Assess admissibility and determine the payable amount, given that total claimed expenses substantially exceed the policy's Sum Insured even before category-specific sub-limits are applied."
+  },
+  {
+    "case_id": "CUST-003",
+    "policy_id": "USGIC-CSC-2017-2018",
+    "policy_start_date": "2026-04-01",
+    "claim_date": "2026-09-01",
+    "sum_insured_inr": 500000,
+    "continuous_coverage_months": 5,
+    "prior_insurer_continuous_years": 2,
+    "patient": { "age": 50 },
+    "hospital": { "name": "Clarity Eye Hospital", "network_provider": true },
+    "treatment": {
+      "type": "day_care",
+      "admission_hours": 6,
+      "diagnosis": "Cataract",
+      "procedure": "Phacoemulsification eye surgery",
       "pre_existing": false,
       "experimental": false
     },
     "expenses_inr": {
       "room": 0,
-      "doctor_fees": 0,
-      "medicines_diagnostics": 0,
+      "doctor_fees": 18000,
+      "medicines_diagnostics": 40000,
+      "pre_hospitalization": 1000,
+      "post_hospitalization": 2000,
+      "ambulance": 0
+    },
+    "documents": ["claim_form", "procedure_record", "itemized_bill", "doctor_certificate", "prior_policy_records"],
+    "prior_policy": {
+      "insurer_type": "Indian individual health insurer",
+      "continuous_years": 2,
+      "database_and_claim_history_received": true,
+      "previous_sum_insured_inr": 500000
+    },
+    "task": "This claim is only 5 months into the current policy (within both the general 30-day waiting period's usual scope and the first-year cataract exclusion window), but the insured has 2 continuous prior years with another Indian insurer. Determine whether BOTH the general waiting period exclusion and the first-year cataract-specific exclusion are waived, requiring evidence from two separate policy sections to be combined correctly."
+  },
+  {
+    "case_id": "CUST-004",
+    "policy_id": "USGIC-CSC-2017-2018",
+    "policy_start_date": "2023-01-01",
+    "claim_date": "2026-08-10",
+    "sum_insured_inr": 500000,
+    "continuous_coverage_months": 43,
+    "prior_insurer_continuous_years": 0,
+    "patient": { "age": 33, "occupation": "Software Engineer", "blood_type": "O+" },
+    "hospital": { "name": "Lakeside General Hospital", "network_provider": true },
+    "treatment": {
+      "type": "inpatient",
+      "admission_hours": 96,
+      "diagnosis": "Acute cholecystitis",
+      "procedure": "Laparoscopic cholecystectomy",
+      "pre_existing": false,
+      "experimental": false
+    },
+    "expenses_inr": {
+      "room": 28000,
+      "doctor_fees": 40000,
+      "medicines_diagnostics": 75000,
+      "pre_hospitalization": 4000,
+      "post_hospitalization": 6000,
+      "ambulance": 1000
+    },
+    "documents": ["claim_form", "discharge_summary", "itemized_bill", "doctor_prescription"],
+    "referral_channel": "hospital walk-in",
+    "task": "A routine, clearly-covered gallbladder surgery claim. Note this case deliberately includes attributes irrelevant to the policy decision (patient occupation, blood type, referral channel) to verify the system's decision is unaffected by their presence."
+  },
+  {
+    "case_id": "CUST-005",
+    "policy_id": "USGIC-CSC-2017-2018",
+    "policy_start_date": "2023-01-01",
+    "claim_date": "2026-08-25",
+    "sum_insured_inr": 500000,
+    "continuous_coverage_months": 43,
+    "prior_insurer_continuous_years": 0,
+    "patient": { "age": 29 },
+    "hospital": { "name": "Sunrise Multispeciality", "network_provider": true },
+    "treatment": {
+      "type": "inpatient",
+      "admission_hours": 30,
+      "diagnosis": "Non-specific abdominal symptoms under observation",
+      "procedure": "Diagnostic observation and monitoring",
+      "pre_existing": false,
+      "experimental": false
+    },
+    "expenses_inr": {
+      "room": 8000,
+      "doctor_fees": 12000,
+      "medicines_diagnostics": 20000,
       "pre_hospitalization": 0,
       "post_hospitalization": 0,
       "ambulance": 0
     },
-    "documents": ["claim_form", "discharge_summary", "itemized_bill"],
-    "task": "TODO -- describe what this case is designed to test, e.g. PARTIALLY_ADMISSIBLE where dental treatment is billed alongside a covered accident-related surgery"
+    "documents": ["claim_form"],
+    "evidence_context": {
+      "hospital_registered": true,
+      "medical_necessity_confirmed": null
+    },
+    "task": "Determine whether this short observation-only admission, with minimal documentation and no confirmation of medical necessity, can be finally decided. Unlike PUB-006/PUB-011, the treating facility's Hospital-definition status is NOT in doubt here (hospital_registered=true) -- the ambiguity is isolated specifically to whether the hospitalization was medically necessary."
   }
 ]

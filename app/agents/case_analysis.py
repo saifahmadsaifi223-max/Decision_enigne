@@ -134,35 +134,84 @@ def analyze_case(case: ClaimCase) -> CaseAnalysisOutput:
             )
         )
 
-    # --- Cosmetic / clearly-excluded-category treatment (keyword heuristic) ---
-    exclusion_keywords = ["cosmetic", "plastic"]
-    if any(kw in case.treatment.diagnosis.lower() or kw in case.treatment.procedure.lower()
-           for kw in exclusion_keywords):
-        dimensions.append("cosmetic_exclusion")
+    # --- Explicitly excluded treatment categories (keyword heuristic) ---
+    # These map to flat exclusions in "What We Exclude" (p.9) that have NO
+    # injury/accident carve-out in the policy text -- unlike, say,
+    # circumcision or cosmetic surgery, which ARE covered when required by
+    # an accidental injury. Dental treatment (item 7) is excluded "of any
+    # kind" with no such carve-out, which is a genuinely citable nuance
+    # worth an agent catching even when dental treatment appears alongside
+    # an otherwise-covered accident claim (see CUST-001).
+    exclusion_keywords = {
+        "cosmetic": "cosmetic_exclusion",
+        "plastic": "cosmetic_exclusion",
+        "dental": "dental_exclusion",
+        "pregnancy": "pregnancy_exclusion",
+        "childbirth": "pregnancy_exclusion",
+        "maternity": "pregnancy_exclusion",
+    }
+    matched_dims = set()
+    for kw, dim in exclusion_keywords.items():
+        if kw in case.treatment.diagnosis.lower() or kw in case.treatment.procedure.lower():
+            matched_dims.add(dim)
+    for dim in matched_dims:
+        dimensions.append(dim)
         plan.append(
             InvestigationItem(
-                dimension="cosmetic_exclusion",
-                question=f"Is '{case.treatment.procedure}' excluded as cosmetic/aesthetic treatment?",
-                relevant_fact=f"diagnosis={case.treatment.diagnosis}",
+                dimension=dim,
+                question=f"Is '{case.treatment.procedure}' (diagnosis: '{case.treatment.diagnosis}') "
+                          f"excluded under the policy's exclusion list, and does any injury/accident "
+                          f"carve-out apply?",
+                relevant_fact=f"diagnosis={case.treatment.diagnosis}, procedure={case.treatment.procedure}",
             )
         )
 
-    # --- Hospital definition (only relevant when there's doubt) ---
+    # --- Hospital definition / medical necessity doubt ---
+    # Each evidence_context field is investigated as its OWN dimension,
+    # scoped strictly to fields the case actually provided (exclude_unset),
+    # not fields that are merely absent/defaulted. This distinction matters:
+    # an earlier version of this function checked the resolved attribute
+    # value directly (e.g. `ec.medical_necessity_confirmed is None`), which
+    # can't tell "explicitly flagged as unknown in this case" apart from
+    # "this case never mentioned this field at all" -- both resolve to
+    # None on the Pydantic model. That caused PUB-011 (which only ever
+    # raises a Hospital-definition doubt) to also spuriously investigate
+    # medical necessity, an ambiguity that case was never designed to
+    # test. Using exclude_unset=True fixes this by only considering
+    # fields present in the source JSON.
     if case.evidence_context is not None:
-        dimensions.append("hospital_definition")
-        plan.append(
-            InvestigationItem(
-                dimension="hospital_definition",
-                question="Does the treating facility meet the policy's definition of 'Hospital'?",
-                relevant_fact=f"network_provider={case.hospital.network_provider}, "
-                              f"evidence_context={case.evidence_context.model_dump()}",
-            )
-        )
-        # Explicitly flag any null fields -- these are deliberate "unknown"
-        # signals in the supplied data, not absent/False.
-        for field_name, value in case.evidence_context.model_dump().items():
+        ec = case.evidence_context
+        ec_provided = ec.model_dump(exclude_unset=True)
+
+        for field_name, value in ec_provided.items():
             if value is None:
                 flagged_null_evidence.append(field_name)
+
+        hospital_fields_provided = {"hospital_registered", "hospital_minimum_criteria_documented"} & ec_provided.keys()
+        hospital_doubt = any(ec_provided[f] in (None, False) for f in hospital_fields_provided)
+        if hospital_doubt:
+            dimensions.append("hospital_definition")
+            plan.append(
+                InvestigationItem(
+                    dimension="hospital_definition",
+                    question="Does the treating facility meet the policy's definition of 'Hospital'?",
+                    relevant_fact=f"network_provider={case.hospital.network_provider}, "
+                                  f"hospital_registered={ec.hospital_registered}, "
+                                  f"hospital_minimum_criteria_documented={ec.hospital_minimum_criteria_documented}",
+                )
+            )
+
+        if "medical_necessity_confirmed" in ec_provided and ec_provided["medical_necessity_confirmed"] in (None, False):
+            dimensions.append("medical_necessity")
+            plan.append(
+                InvestigationItem(
+                    dimension="medical_necessity",
+                    question="Is there sufficient evidence that this hospitalization/treatment was "
+                              "medically necessary, per the policy's definition of 'Medically Necessary'?",
+                    relevant_fact=f"medical_necessity_confirmed={ec.medical_necessity_confirmed}, "
+                                  f"documents={case.documents}",
+                )
+            )
 
     # --- Missing documents heuristic ---
     expected_docs = {"claim_form", "discharge_summary", "itemized_bill"}

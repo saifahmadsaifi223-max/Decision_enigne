@@ -43,8 +43,40 @@ EXPECTED_DECISIONS = {
     "PUB-010": "ADMISSIBLE",
     "PUB-011": "NEEDS_REVIEW",
     "PUB-012": "NOT_ADMISSIBLE",
-    # Add your 5 custom case_ids -> expected decisions here once written,
-    # e.g. "CUST-001": "PARTIALLY_ADMISSIBLE",
+    # --- Custom cases (see eval/custom_cases.json for full case data and
+    # design rationale; reasoning for each expected decision below). ---
+    "CUST-001": "PARTIALLY_ADMISSIBLE",  # fracture treatment covered; dental
+                                          # restoration flatly excluded per
+                                          # p.9 item 7 ("Dental treatment or
+                                          # surgery of any kind") -- unlike
+                                          # circumcision/cosmetic exclusions,
+                                          # this item has NO injury/accident
+                                          # carve-out in the policy text.
+    "CUST-002": "ADMISSIBLE_WITH_LIMITS",  # total claimed (~4.55L) far
+                                            # exceeds Sum Insured (3L);
+                                            # p.10 "no liability once Sum
+                                            # Insured is exhausted" caps
+                                            # the payable amount regardless
+                                            # of category sub-limits.
+    "CUST-003": "ADMISSIBLE",  # 2 continuous prior years with another
+                                # Indian insurer + database/claim history
+                                # received satisfies BOTH the general
+                                # 30-day waiting period waiver AND the
+                                # first-year cataract-specific exclusion
+                                # waiver (p.9) -- requires combining two
+                                # separate policy sections.
+    "CUST-004": "ADMISSIBLE_WITH_LIMITS",  # routine covered surgery;
+                                            # room rent (28,000) exceeds the
+                                            # 1%-of-SI cap (5,000/day), so a
+                                            # limit applies regardless of
+                                            # the irrelevant patient/referral
+                                            # attributes present in the input.
+    "CUST-005": "NEEDS_REVIEW",  # hospital_registered=true (no doubt about
+                                  # the Hospital definition, unlike
+                                  # PUB-006/PUB-011) but
+                                  # medical_necessity_confirmed=null with
+                                  # minimal supporting documentation --
+                                  # a distinct abstention root cause.
 }
 
 
@@ -132,3 +164,5 @@ def run_evaluation():
 
 if __name__ == "__main__":
     run_evaluation()
+
+    
