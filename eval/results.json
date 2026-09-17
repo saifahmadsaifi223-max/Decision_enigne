@@ -1,0 +1,167 @@
+{
+  "summary": {
+    "total_cases": 17,
+    "scored_cases": 17,
+    "decision_accuracy": 0.235,
+    "citation_presence_rate": 0.353,
+    "validation_pass_rate": 0.0,
+    "abstention_count": 3,
+    "abstention_requirement_met": true
+  },
+  "per_case": [
+    {
+      "case_id": "PUB-001",
+      "expected": "ADMISSIBLE_WITH_LIMITS",
+      "actual": "ADMISSIBLE_WITH_LIMITS",
+      "correct": true,
+      "confidence": 0.7,
+      "has_citations": true,
+      "citation_count": 3,
+      "validation_status": "FAIL",
+      "elapsed_sec": 86.77
+    },
+    {
+      "case_id": "PUB-002",
+      "expected": "NOT_ADMISSIBLE",
+      "actual": "NOT_ADMISSIBLE",
+      "correct": true,
+      "confidence": 0.7,
+      "has_citations": true,
+      "citation_count": 3,
+      "validation_status": "FAIL",
+      "elapsed_sec": 73.25
+    },
+    {
+      "case_id": "PUB-003",
+      "expected": "NOT_ADMISSIBLE",
+      "actual": "NEEDS_REVIEW",
+      "correct": false,
+      "confidence": 0.7,
+      "has_citations": true,
+      "citation_count": 6,
+      "validation_status": "FAIL",
+      "elapsed_sec": 105.99
+    },
+    {
+      "case_id": "PUB-004",
+      "expected": "ADMISSIBLE_WITH_LIMITS",
+      "actual": "ADMISSIBLE_WITH_LIMITS",
+      "correct": true,
+      "confidence": 0.7,
+      "has_citations": true,
+      "citation_count": 9,
+      "validation_status": "FAIL",
+      "elapsed_sec": 107.26
+    },
+    {
+      "case_id": "PUB-005",
+      "expected": "ADMISSIBLE",
+      "actual": "NEEDS_REVIEW",
+      "correct": false,
+      "confidence": 0.7,
+      "has_citations": true,
+      "citation_count": 6,
+      "validation_status": "FAIL",
+      "elapsed_sec": 113.49
+    },
+    {
+      "case_id": "PUB-006",
+      "expected": "NEEDS_REVIEW",
+      "actual": "NEEDS_REVIEW",
+      "correct": true,
+      "confidence": 0.7,
+      "has_citations": true,
+      "citation_count": 5,
+      "validation_status": "FAIL",
+      "elapsed_sec": 104.25
+    },
+    {
+      "case_id": "PUB-007",
+      "expected": "ADMISSIBLE_WITH_LIMITS",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199110, Requested 2254. Please try again in 9m49.247999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 27.51
+    },
+    {
+      "case_id": "PUB-008",
+      "expected": "NOT_ADMISSIBLE",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199106, Requested 2748. Please try again in 13m20.928s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.66
+    },
+    {
+      "case_id": "PUB-009",
+      "expected": "ADMISSIBLE_WITH_LIMITS",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199102, Requested 2704. Please try again in 13m0.192s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.92
+    },
+    {
+      "case_id": "PUB-010",
+      "expected": "ADMISSIBLE",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199098, Requested 2748. Please try again in 13m17.472s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.68
+    },
+    {
+      "case_id": "PUB-011",
+      "expected": "NEEDS_REVIEW",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199094, Requested 2609. Please try again in 12m15.696s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.68
+    },
+    {
+      "case_id": "PUB-012",
+      "expected": "NOT_ADMISSIBLE",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199090, Requested 2748. Please try again in 13m14.016s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.74
+    },
+    {
+      "case_id": "CUST-001",
+      "expected": "PARTIALLY_ADMISSIBLE",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199086, Requested 2704. Please try again in 12m53.28s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.76
+    },
+    {
+      "case_id": "CUST-002",
+      "expected": "ADMISSIBLE_WITH_LIMITS",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199082, Requested 2609. Please try again in 12m10.512s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.68
+    },
+    {
+      "case_id": "CUST-003",
+      "expected": "ADMISSIBLE",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199078, Requested 2704. Please try again in 12m49.824s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.67
+    },
+    {
+      "case_id": "CUST-004",
+      "expected": "ADMISSIBLE_WITH_LIMITS",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199074, Requested 2609. Please try again in 12m7.056s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.67
+    },
+    {
+      "case_id": "CUST-005",
+      "expected": "NEEDS_REVIEW",
+      "actual": "ERROR",
+      "correct": false,
+      "error": "LLM call failed after 3 attempts: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m2nm900se3rayarq383j6481` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199070, Requested 2609. Please try again in 12m5.328s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "elapsed_sec": 1.79
+    }
+  ]
+}
