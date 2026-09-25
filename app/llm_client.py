@@ -39,8 +39,6 @@ def call_llm_json(system: str, user: str, max_retries: int = 3) -> dict:
     """
     if LLM_PROVIDER == "groq":
         return _call_groq_json(system, user, max_retries)
-    elif LLM_PROVIDER == "gemini":
-        return _call_gemini_json(system, user, max_retries)
     else:
         raise ValueError(f"Unknown LLM_PROVIDER: {LLM_PROVIDER}")
 
@@ -80,22 +78,4 @@ def _call_groq_json(system: str, user: str, max_retries: int) -> dict:
     raise RuntimeError(f"LLM call failed after {max_retries + 1} attempts: {last_err}")
 
 
-def _call_gemini_json(system: str, user: str, max_retries: int) -> dict:
-    import google.generativeai as genai  # pip install google-generativeai
-
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel(
-        "gemini-1.5-flash",
-        system_instruction=system,
-        generation_config={"response_mime_type": "application/json"},
-    )
-
-    last_err = None
-    for attempt in range(max_retries + 1):
-        try:
-            response = model.generate_content(user)
-            return json.loads(_strip_json_fences(response.text))
-        except Exception as e:  # noqa: BLE001
-            last_err = e
-    raise RuntimeError(f"LLM call failed after {max_retries + 1} attempts: {last_err}")
 
