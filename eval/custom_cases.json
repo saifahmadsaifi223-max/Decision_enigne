@@ -154,5 +154,34 @@
       "medical_necessity_confirmed": null
     },
     "task": "Determine whether this short observation-only admission, with minimal documentation and no confirmation of medical necessity, can be finally decided. Unlike PUB-006/PUB-011, the treating facility's Hospital-definition status is NOT in doubt here (hospital_registered=true) -- the ambiguity is isolated specifically to whether the hospitalization was medically necessary."
+  },
+  {
+    "case_id": "CUST-006",
+    "policy_id": "USGIC-CSC-2017-2018",
+    "policy_start_date": "2023-01-01",
+    "claim_date": "2026-08-30",
+    "sum_insured_inr": 500000,
+    "continuous_coverage_months": 43,
+    "prior_insurer_continuous_years": 0,
+    "patient": { "age": 26 },
+    "hospital": { "name": "Adventure Sports Medical Centre", "network_provider": true },
+    "treatment": {
+      "type": "inpatient",
+      "admission_hours": 96,
+      "diagnosis": "Fracture and internal injuries sustained during bungee jumping",
+      "procedure": "Surgical fixation and internal repair",
+      "pre_existing": false,
+      "experimental": false
+    },
+    "expenses_inr": {
+      "room": 22000,
+      "doctor_fees": 45000,
+      "medicines_diagnostics": 95000,
+      "pre_hospitalization": 2000,
+      "post_hospitalization": 4000,
+      "ambulance": 1500
+    },
+    "documents": ["claim_form", "discharge_summary", "itemized_bill", "incident_report"],
+    "task": "This case deliberately tests the system's ability to catch a policy exclusion (adventure sports) that isn't covered by any of the deterministic investigation rules (waiting period, PED, first-year list, domiciliary, day-care, experimental, cosmetic/dental/pregnancy, hospital definition) -- it should only be caught via the Case Analysis Agent's LLM fallback dimension detector, or missed entirely if that fallback isn't working."
   }
 ]

@@ -11,6 +11,7 @@ default since it's free-tier, fast, and has an OpenAI-compatible API.
 import json
 import os
 import re
+import time
 
 from dotenv import load_dotenv
 load_dotenv()  # safety net in case this module is imported without api.py
@@ -31,13 +32,15 @@ def _strip_json_fences(text: str) -> str:
     return text.strip()
 
 
-def call_llm_json(system: str, user: str, max_retries: int = 2) -> dict:
+def call_llm_json(system: str, user: str, max_retries: int = 3) -> dict:
     """Calls the configured LLM with a system+user prompt and parses the
     response as JSON. Raises on repeated failure -- callers should decide
     how to degrade (e.g. treat as NEEDS_REVIEW rather than crash).
     """
     if LLM_PROVIDER == "groq":
         return _call_groq_json(system, user, max_retries)
+    elif LLM_PROVIDER == "gemini":
+        return _call_gemini_json(system, user, max_retries)
     else:
         raise ValueError(f"Unknown LLM_PROVIDER: {LLM_PROVIDER}")
 
@@ -63,6 +66,36 @@ def _call_groq_json(system: str, user: str, max_retries: int) -> dict:
             return json.loads(_strip_json_fences(content))
         except Exception as e:  # noqa: BLE001 -- deliberately broad, we retry then re-raise
             last_err = e
+            err_text = str(e).lower()
+            is_rate_limit = "rate_limit" in err_text or "429" in err_text or "rate limit" in err_text
+            if attempt < max_retries:
+                # Exponential backoff, longer for confirmed rate-limit errors
+                # than for generic transient failures -- retrying instantly
+                # after a 429 just hits the same limit again and wastes the
+                # attempt. This matters a lot for a full evaluation run
+                # (18 cases x ~8-12 calls each = 100+ sequential calls
+                # against a free-tier TPM/RPM ceiling).
+                delay = (10 if is_rate_limit else 2) * (2 ** attempt)
+                time.sleep(delay)
     raise RuntimeError(f"LLM call failed after {max_retries + 1} attempts: {last_err}")
 
+
+def _call_gemini_json(system: str, user: str, max_retries: int) -> dict:
+    import google.generativeai as genai  # pip install google-generativeai
+
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    model = genai.GenerativeModel(
+        "gemini-1.5-flash",
+        system_instruction=system,
+        generation_config={"response_mime_type": "application/json"},
+    )
+
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            response = model.generate_content(user)
+            return json.loads(_strip_json_fences(response.text))
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+    raise RuntimeError(f"LLM call failed after {max_retries + 1} attempts: {last_err}")
 

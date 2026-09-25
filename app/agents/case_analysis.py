@@ -4,22 +4,98 @@ Case Analysis Agent.
 Responsibility: read the raw ClaimCase, identify which policy decision
 dimensions are relevant, flag any explicitly-missing/null evidence, and
 produce a structured investigation plan that drives the retrieval queries
-used downstream. This agent does NOT touch the policy text at all --
-it only reasons over the case JSON.
+used downstream.
 
-This is intentionally rule-based rather than an LLM call: the decision
-dimensions map fairly directly and deterministically off case fields
-(e.g. `treatment.experimental == True` -> always investigate the
-experimental-treatment dimension). Keeping this deterministic where
-possible reduces hallucination risk and makes the pipeline cheaper/faster;
-save the LLM calls for the genuinely open-ended reasoning steps
-(Decision Agent, Validation Agent).
+DESIGN: hybrid rule-based + LLM fallback, not purely rule-based. The
+deterministic rules below cover every dimension the 17 evaluation cases
+actually exercise, and stay deterministic (zero LLM cost, zero
+hallucination risk) for exactly that reason. But a rule list written
+against 17 known cases will not anticipate every real-world claim shape --
+a claim mentioning an adventure-sports injury, a war-zone treatment, or an
+HIV-related complication (all explicit but less common policy exclusions)
+would silently fall through the cracks of a purely rule-based detector,
+not because retrieval or reasoning is bad, but because nobody ever asked
+the right question in the first place. `detect_additional_dimensions()`
+closes this gap with one LLM call that reviews the claim against the
+dimensions already identified and proposes anything the rules missed. This
+call only ever proposes INVESTIGATION QUESTIONS, never policy answers --
+the actual grounded assessment still happens downstream via retrieval +
+the Decision Agent, so a bad proposal here wastes a retrieval call at
+worst, it cannot inject an unsupported claim into the final decision.
 """
 
 from app.models import ClaimCase, CaseAnalysisOutput, InvestigationItem
+from app.llm_client import call_llm_json
 
 
-def analyze_case(case: ClaimCase) -> CaseAnalysisOutput:
+FALLBACK_DIMENSION_SYSTEM_PROMPT = """You are an insurance claims triage assistant.
+You are given a claim's key facts and a list of policy-decision dimensions
+ALREADY being investigated for this claim.
+
+Your ONLY job is to flag whether there are OTHER potentially relevant policy
+considerations not already covered -- for example (not exhaustive): adventure
+sports injury, war/riot/terrorism, HIV/AIDS-related treatment, self-inflicted
+injury or intoxication, alternative/naturopathic/non-allopathic treatment,
+outpatient-only treatment, treatment lasting fewer than three days, external
+medical equipment used at home, multiple/overlapping insurance policies, or
+any other explicit policy consideration suggested by the claim's specific
+diagnosis or procedure.
+
+Do NOT decide whether the claim is covered -- only propose additional
+investigation QUESTIONS if genuinely warranted by the claim's specific facts.
+If the existing dimensions already cover everything relevant, return an
+empty list. Do not propose a dimension already in the existing list.
+
+Respond with strict JSON:
+{
+  "additional_dimensions": [
+    {"dimension": "<short_snake_case_name>", "question": "<specific investigation question>", "relevant_fact": "<the case fact that triggered this>"}
+  ]
+}
+"""
+
+
+def detect_additional_dimensions(case: ClaimCase, existing_dimensions: list[str]) -> list[InvestigationItem]:
+    case_summary = (
+        f"Diagnosis: {case.treatment.diagnosis}\n"
+        f"Procedure: {case.treatment.procedure}\n"
+        f"Treatment type: {case.treatment.type}\n"
+        f"Pre-existing: {case.treatment.pre_existing}, Experimental: {case.treatment.experimental}\n"
+        f"Admission hours: {case.treatment.admission_hours}\n"
+        f"Hospital network provider: {case.hospital.network_provider}\n"
+        f"Documents supplied: {case.documents}\n"
+        f"Task description: {case.task}"
+    )
+    try:
+        raw = call_llm_json(
+            system=FALLBACK_DIMENSION_SYSTEM_PROMPT,
+            user=f"Claim facts:\n{case_summary}\n\n"
+                 f"Dimensions already being investigated: {existing_dimensions}",
+        )
+    except Exception:
+        # Best-effort safety net, not a hard dependency. If this call fails
+        # (rate limit, transient network issue), the deterministic rules
+        # above still cover every well-understood dimension -- degrade
+        # silently rather than fail the whole case analysis over a
+        # fallback step whose entire purpose is catching EXTRA edge cases.
+        return []
+
+    items = []
+    for entry in raw.get("additional_dimensions", []):
+        dim = str(entry.get("dimension", "")).strip()
+        if not dim or dim in existing_dimensions:
+            continue
+        items.append(
+            InvestigationItem(
+                dimension=dim,
+                question=entry.get("question", ""),
+                relevant_fact=entry.get("relevant_fact"),
+            )
+        )
+    return items
+
+
+def analyze_case(case: ClaimCase, use_llm_fallback: bool = True) -> CaseAnalysisOutput:
     dimensions: list[str] = []
     plan: list[InvestigationItem] = []
     missing_fields: list[str] = []
@@ -220,6 +296,16 @@ def analyze_case(case: ClaimCase) -> CaseAnalysisOutput:
         if missing:
             missing_fields.extend(sorted(missing))
 
+    # --- LLM fallback: catch dimensions the deterministic rules above
+    # didn't anticipate (see module docstring for why this exists). This
+    # is the only LLM call in this agent, and it can only ADD investigation
+    # questions -- it never removes or overrides the deterministic rules.
+    if use_llm_fallback:
+        additional_items = detect_additional_dimensions(case, dimensions)
+        for item in additional_items:
+            dimensions.append(item.dimension)
+            plan.append(item)
+
     return CaseAnalysisOutput(
         case_id=case.case_id,
         decision_dimensions=dimensions,
@@ -227,3 +313,5 @@ def analyze_case(case: ClaimCase) -> CaseAnalysisOutput:
         missing_fields=missing_fields,
         flagged_null_evidence=flagged_null_evidence,
     )
+
+

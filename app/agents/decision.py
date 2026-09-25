@@ -51,12 +51,20 @@ Answer ONLY using the retrieved policy excerpts. Do not use outside insurance
 knowledge. If the excerpts do not clearly answer the question, say so explicitly
 rather than guessing.
 
+IMPORTANT SCOPING RULE: your conclusion must stay narrowly scoped to THIS
+specific dimension/question only. Do not make a broader claim about the
+claim's overall admissibility -- that judgment belongs to a later step that
+combines every dimension together. For example, if you are checking whether
+a condition appears on ONE specific exclusion list and it does not, conclude
+"this condition does not appear on [that specific list]" -- do NOT conclude
+the broader "this claim is not excluded" or "this question does not apply,"
+since a different policy provision entirely might still exclude it.
+
 Respond with strict JSON matching this shape:
 {
-  "conclusion": "<one or two sentence conclusion>",
+  "conclusion": "<one or two sentence conclusion, narrowly scoped as above>",
   "supports_admissibility": true | false | null,
-  "applicable_limit": "<string or null>",
-  "cited_chunk_ids": ["<chunk_id>", ...]
+  "applicable_limit": "<string or null>"
 }
 """
 
@@ -79,15 +87,23 @@ def assess_dimension(question: str, relevant_fact: str, evidence) -> DimensionFi
     )
     raw = call_llm_json(system=DIMENSION_SYSTEM_PROMPT, user=user_prompt)
 
-    cited_ids = set(raw.get("cited_chunk_ids", []))
-    cited_evidence = [e for e in evidence if e.chunk_id in cited_ids] or evidence[:1]
-
+    # IMPORTANT (see FAILURE_ANALYSIS.md, Failure 5): attach ALL retrieved
+    # evidence to the finding, not just the subset of chunk_ids the LLM
+    # self-reported as "cited." A conclusion can correctly combine facts
+    # from multiple retrieved chunks (e.g. one chunk defining "Adventure
+    # Sports" to include bungee jumping, another stating adventure-sport
+    # injuries are excluded) while the model only names one of them in its
+    # own citation list. If the Validation Agent then only sees that one
+    # incomplete chunk, a genuinely correct, well-grounded conclusion gets
+    # wrongly flagged as unsupported. Attaching the full retrieved set
+    # trades a slightly longer citation list for a validation check that
+    # actually has access to everything the reasoning could have used.
     return DimensionFinding(
         dimension="",  # filled by caller
         conclusion=raw.get("conclusion", ""),
         supports_admissibility=raw.get("supports_admissibility"),
         applicable_limit=raw.get("applicable_limit"),
-        evidence=cited_evidence,
+        evidence=list(evidence),
     )
 
 

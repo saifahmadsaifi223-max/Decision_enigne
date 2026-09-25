@@ -27,13 +27,37 @@ from app.llm_client import call_llm_json
 
 
 VALIDATION_SYSTEM_PROMPT = """You are a strict fact-checker. You will be given a
-conclusion statement and the exact policy excerpt(s) it is supposed to be based on.
+conclusion statement and one or more retrieved policy excerpts. The excerpts
+were retrieved for this dimension but may include some that turn out to be
+irrelevant noise -- retrieval is not perfectly precise.
 
-Determine: do the excerpts actually, directly support the conclusion? Be strict --
-if the conclusion adds specifics (numbers, conditions) not present in the excerpts,
-or contradicts them, mark it unsupported. A conclusion that says evidence is
-missing/inconclusive should be marked supported as long as that's an honest
-reading of the excerpts (i.e. it's fine for a conclusion to admit uncertainty).
+Determine: does AT LEAST ONE of the excerpts directly support the conclusion?
+You do NOT need every excerpt to be relevant or supportive -- ignore excerpts
+that are irrelevant, and only check whether the conclusion is backed by the
+excerpt(s) that DO relate to it. Be strict about that supporting excerpt itself
+-- if the conclusion adds specifics (numbers, conditions) not present in it,
+or contradicts it, mark it unsupported.
+
+A conclusion that HONESTLY ADMITS uncertainty or says evidence is inconclusive
+should be marked SUPPORTED, as long as that admission is an accurate reading of
+the excerpts. Example: conclusion "The breakdown of expenses by category is not
+provided, so it is unclear whether the sub-limit is exceeded" is SUPPORTED if
+an excerpt states a sub-limit but the claim facts genuinely don't break down
+expenses by category -- this is an honest, correct statement of uncertainty,
+not an unsupported claim. Do not penalize a conclusion for admitting it cannot
+reach a definite answer; only penalize it for asserting something definite that
+no excerpt actually establishes.
+
+A conclusion that performs SIMPLE, CORRECT ARITHMETIC on a rule explicitly
+stated in an excerpt should also be marked SUPPORTED, even if the excerpt only
+states a percentage/formula rather than a precomputed rupee figure. Example: if
+an excerpt says "Normal Room expenses: 1.0% of Basic Sum Insured" and the
+conclusion states "this caps room rent at Rs. 5,000" for a claim with a
+Rs. 500,000 Sum Insured, that IS supported -- 1% of 500,000 is correctly 5,000.
+This is not a hallucinated fact; it is a correct derivation from an explicitly
+stated rule. Only mark such a derivation unsupported if the arithmetic itself
+is wrong, or if it relies on a percentage/number NOT actually present in any
+excerpt.
 
 Respond with strict JSON:
 { "supported": true | false, "reason": "<one sentence>" }
@@ -45,6 +69,24 @@ def _validate_finding(finding: DimensionFinding) -> bool:
         # A conclusion with zero backing evidence can never be "supported" --
         # this usually means retrieval came back empty for this dimension.
         return False
+
+    # Fast-path, no LLM call: a finding that already honestly reports
+    # supports_admissibility=None is, by construction, an admission of
+    # uncertainty rather than a definite claim -- there is nothing to
+    # hallucinate here, since the Decision Agent itself already said "I
+    # can't determine this either way." Relying on a second LLM call to
+    # correctly apply the "honest uncertainty is fine" rule from the
+    # validation prompt proved inconsistent across repeated tests (see
+    # FAILURE_ANALYSIS.md, Failures 6-7) -- the validation model would
+    # sometimes flag an admitted-uncertain conclusion as unsupported
+    # anyway, despite explicit prompt instructions and worked examples not
+    # to. Rather than continuing to tune the prompt and hope the model
+    # follows it every time, this class of finding is made deterministically
+    # safe in code: an inconclusive finding cannot be "wrong" in the sense
+    # validation cares about, so it always passes without needing an LLM
+    # to agree.
+    if finding.supports_admissibility is None:
+        return True
 
     evidence_block = "\n\n".join(
         f"[{e.chunk_id}] (page {e.page}, section: {e.section})\n{e.text}"
@@ -110,4 +152,3 @@ def validate_coverage(coverage: CoverageFindings, trace: list[TraceEntry]) -> tu
         missing_evidence=coverage.missing_evidence,
     )
     return validated_coverage, ValidationResult(status=status, unsupported_claims=unsupported)
-

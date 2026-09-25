@@ -77,6 +77,18 @@ EXPECTED_DECISIONS = {
                                   # medical_necessity_confirmed=null with
                                   # minimal supporting documentation --
                                   # a distinct abstention root cause.
+    "CUST-006": "NOT_ADMISSIBLE",  # adventure sports injury -- excluded
+                                    # per p.9 item 14 ("Any expense
+                                    # related to Disease/Injury suffered
+                                    # whilst engaged in adventurous
+                                    # sports"). Deliberately NOT covered
+                                    # by any deterministic investigation
+                                    # rule in case_analysis.py -- this
+                                    # case specifically tests whether the
+                                    # LLM fallback dimension detector
+                                    # catches an exclusion the rule-based
+                                    # heuristics were never written to
+                                    # anticipate.
 }
 
 
@@ -90,8 +102,13 @@ def load_cases() -> list[dict]:
 def run_evaluation():
     raw_cases = load_cases()
     results = []
+    run_start = time.time()
 
-    for raw_case in raw_cases:
+    print(f"Running evaluation on {len(raw_cases)} cases. Each case makes several "
+          f"sequential LLM calls, so this can take 30-50+ minutes total on a "
+          f"free-tier API. Progress will print after each case.\n")
+
+    for i, raw_case in enumerate(raw_cases, start=1):
         case = ClaimCase(**raw_case)
         expected = EXPECTED_DECISIONS.get(case.case_id)
 
@@ -111,9 +128,18 @@ def run_evaluation():
                     "has_citations": has_citations,
                     "citation_count": len(decision.citations),
                     "validation_status": decision.validation.status.value,
+                    "key_findings": decision.key_findings,
+                    "applicable_limits": decision.applicable_limits,
+                    "missing_evidence": decision.missing_evidence,
                     "elapsed_sec": round(elapsed, 2),
                 }
             )
+            mark = "PASS" if correct else ("N/A" if expected is None else "FAIL")
+            print(f"[{i}/{len(raw_cases)}] {case.case_id}: expected={expected} "
+                  f"actual={decision.decision.value} [{mark}] "
+                  f"confidence={decision.confidence:.0%} "
+                  f"validation={decision.validation.status.value} "
+                  f"({elapsed:.1f}s)")
         except Exception as e:  # noqa: BLE001
             results.append(
                 {
@@ -125,6 +151,9 @@ def run_evaluation():
                     "elapsed_sec": round(time.time() - t0, 2),
                 }
             )
+            print(f"[{i}/{len(raw_cases)}] {case.case_id}: ERROR -- {e}")
+
+    total_elapsed = time.time() - run_start
 
     # --- Aggregate metrics ---
     scored = [r for r in results if r.get("expected") is not None]
@@ -143,6 +172,8 @@ def run_evaluation():
         "validation_pass_rate": round(validation_pass_rate, 3),
         "abstention_count": abstention_count,
         "abstention_requirement_met": abstention_count >= 2,
+        "total_elapsed_sec": round(total_elapsed, 1),
+        "total_elapsed_min": round(total_elapsed / 60, 1),
     }
 
     output = {"summary": summary, "per_case": results}
@@ -165,4 +196,3 @@ def run_evaluation():
 if __name__ == "__main__":
     run_evaluation()
 
-    

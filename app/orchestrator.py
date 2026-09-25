@@ -40,7 +40,9 @@ def analyze_claim(case: ClaimCase) -> FinalDecision:
         TraceEntry(
             agent="CaseAnalysisAgent",
             action="build_investigation_plan",
-            detail=f"{len(analysis.investigation_plan)} dimensions identified",
+            detail=f"{len(analysis.investigation_plan)} dimensions identified "
+                   f"(includes LLM-fallback dimensions beyond the deterministic rules, "
+                   f"if any were proposed)",
             elapsed_ms=(time.time() - t0) * 1000,
         )
     )
