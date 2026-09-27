@@ -40,7 +40,15 @@ EXPECTED_DECISIONS = {
     "PUB-007": "ADMISSIBLE_WITH_LIMITS",
     "PUB-008": "NOT_ADMISSIBLE",
     "PUB-009": "ADMISSIBLE_WITH_LIMITS",
-    "PUB-010": "ADMISSIBLE",
+    "PUB-010": "ADMISSIBLE",  # NOTE: re-examined during debugging (see
+                               # FAILURE_ANALYSIS.md Failure 7) -- item 3's
+                               # cataract-specific exclusion is cleanly
+                               # waived by 1 prior year alone, but the
+                               # separate item 2 (general 30-day waiver via
+                               # the same route) additionally needs proof
+                               # of "unaware/no prior medication," which
+                               # this case's data doesn't address.
+                               # NEEDS_REVIEW is also defensible.
     "PUB-011": "NEEDS_REVIEW",
     "PUB-012": "NOT_ADMISSIBLE",
     # --- Custom cases (see eval/custom_cases.json for full case data and
@@ -196,3 +204,4 @@ def run_evaluation():
 if __name__ == "__main__":
     run_evaluation()
 
+    

@@ -36,10 +36,19 @@ Your ONLY job is to flag whether there are OTHER potentially relevant policy
 considerations not already covered -- for example (not exhaustive): adventure
 sports injury, war/riot/terrorism, HIV/AIDS-related treatment, self-inflicted
 injury or intoxication, alternative/naturopathic/non-allopathic treatment,
-outpatient-only treatment, treatment lasting fewer than three days, external
-medical equipment used at home, multiple/overlapping insurance policies, or
-any other explicit policy consideration suggested by the claim's specific
-diagnosis or procedure.
+treatment lasting fewer than three days, external medical equipment used at
+home, multiple/overlapping insurance policies, or any other explicit policy
+consideration suggested by the claim's specific diagnosis or procedure.
+
+IMPORTANT -- do NOT second-guess or re-classify the claim's already-established
+treatment type. The claim's `treatment.type` field (inpatient, domiciliary, or
+day_care) is a GIVEN FACT, not something to question. For example, if
+treatment.type is "domiciliary", do NOT propose checking whether it might
+"really" be outpatient-only or day-care treatment instead -- that is not a new
+consideration, it is relitigating a fact already established in the claim data,
+and the dimensions already covering domiciliary treatment (if listed) already
+handle this correctly. Only propose dimensions that are genuinely ADDITIONAL
+policy considerations, not alternate framings of the claim's basic facts.
 
 Do NOT decide whether the claim is covered -- only propose additional
 investigation QUESTIONS if genuinely warranted by the claim's specific facts.
@@ -203,8 +212,17 @@ def analyze_case(case: ClaimCase, use_llm_fallback: bool = True) -> CaseAnalysis
         plan.append(
             InvestigationItem(
                 dimension="portability_continuity",
-                question="Does continuous prior coverage with another insurer reduce or "
-                          "waive any waiting periods for this claim?",
+                question="This claim may involve TWO SEPARATE waiver clauses with "
+                          "DIFFERENT conditions -- do not conflate them. (1) The "
+                          "first-year disease-specific exclusion list (e.g. cataract) "
+                          "is waived by simply having at least 1 continuous prior year "
+                          "with any Indian insurer -- no further condition. (2) The "
+                          "SEPARATE general 30-day waiting period, when waived via the "
+                          "same 1-year-prior-insurer route, ADDITIONALLY requires "
+                          "establishing the insured was unaware of and had not taken "
+                          "advice/medication for the specific condition. Assess EACH "
+                          "of these two clauses independently and state which "
+                          "condition(s), if any, remain unresolved.",
                 relevant_fact=str(case.prior_policy.model_dump()) if case.prior_policy else
                               f"prior_insurer_continuous_years={case.prior_insurer_continuous_years}",
             )
@@ -313,5 +331,4 @@ def analyze_case(case: ClaimCase, use_llm_fallback: bool = True) -> CaseAnalysis
         missing_fields=missing_fields,
         flagged_null_evidence=flagged_null_evidence,
     )
-
 
