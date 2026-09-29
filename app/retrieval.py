@@ -27,6 +27,18 @@ CHUNKS_PATH = Path("data/policy_chunks.json")
 CHROMA_DIR = "data/chroma_db"
 COLLECTION_NAME = "policy_chunks"
 
+# ENABLE_DENSE_RETRIEVAL controls whether the Chroma/embedding-based dense
+# retrieval step runs at all. Even after switching to onnxruntime (no
+# torch) for embeddings, ChromaDB + onnxruntime + the embedding step still
+# exceeded Render's 512MB free-tier ceiling on its own -- see
+# FAILURE_ANALYSIS.md. BM25 (sparse/lexical) retrieval alone has a
+# negligible memory footprint (pure Python, no model weights at all), so
+# disabling dense retrieval is the final lever for genuinely
+# memory-constrained deployments: the system degrades to sparse-only
+# retrieval rather than failing to start at all. Local dev keeps the full
+# hybrid pipeline by default.
+ENABLE_DENSE_RETRIEVAL = os.getenv("ENABLE_DENSE_RETRIEVAL", "true").lower() == "true"
+
 # ENABLE_RERANKER controls whether the cross-encoder reranking stage runs.
 # The cross-encoder (via sentence-transformers) pulls in PyTorch purely by
 # being imported, which alone can exceed a memory-constrained deployment's
@@ -106,7 +118,12 @@ class HybridRetriever:
     def build_all(self) -> None:
         self.load_chunks()
         self.build_bm25()
-        self.build_chroma()
+        if ENABLE_DENSE_RETRIEVAL:
+            self.build_chroma()
+        # else: self._collection stays None -- _dense_search() below
+        # returns an empty result set safely without ever touching Chroma,
+        # onnxruntime, or any embedding model, so none of that gets loaded
+        # into memory at all on a constrained deployment.
 
     def _load_reranker(self):
         if self._reranker is None:
@@ -120,6 +137,8 @@ class HybridRetriever:
     # ---- Query ------------------------------------------------------------
 
     def _dense_search(self, query: str, k: int = TOP_K_DENSE):
+        if not ENABLE_DENSE_RETRIEVAL or self._collection is None:
+            return []
         result = self._collection.query(query_texts=[query], n_results=k)
         chunk_ids = result["ids"][0]
         distances = result["distances"][0]  # smaller = more similar (cosine distance)
@@ -215,3 +234,5 @@ if __name__ == "__main__":
         for r in retriever.retrieve(q, top_k=3):
             print(f"  [{r.chunk_id}] p.{r.page} {r.section}/{r.subsection or ''} "
                   f"rerank={r.rerank_score:.3f}  {r.text[:80]!r}")
+
+            
