@@ -13,27 +13,41 @@ and BM25 index from those chunks.
 """
 
 import json
+import os
 from pathlib import Path
 from typing import List
 
 from rank_bm25 import BM25Okapi
 import chromadb
 from chromadb.utils import embedding_functions
-from sentence_transformers import CrossEncoder
 
 from app.models import PolicyChunk, RetrievedEvidence
 
 CHUNKS_PATH = Path("data/policy_chunks.json")
 CHROMA_DIR = "data/chroma_db"
 COLLECTION_NAME = "policy_chunks"
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"          # small, free, local
-RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"  # free, local
-                                                # swap for BAAI/bge-reranker-base if you have GPU headroom
+
+# ENABLE_RERANKER controls whether the cross-encoder reranking stage runs.
+# The cross-encoder (via sentence-transformers) pulls in PyTorch purely by
+# being imported, which alone can exceed a memory-constrained deployment's
+# limit (this exact issue caused an OOM crash on Render's 512MB free tier --
+# see FAILURE_ANALYSIS.md). ChromaDB's own DefaultEmbeddingFunction below
+# uses onnxruntime instead of sentence-transformers/torch for the DENSE
+# embedding step, which is always needed -- so that swap alone removes most
+# of the memory pressure. The reranker is the remaining torch dependency;
+# making it optional (default ON for local dev / any environment with
+# enough RAM, easily switched OFF for tight deployments via env var) lets
+# the same codebase run acceptably in both environments rather than forcing
+# one-size-fits-all. The `sentence_transformers` import for CrossEncoder is
+# deliberately deferred into `_load_reranker()`, not done at module level,
+# so torch is never even imported into memory when reranking is disabled.
+ENABLE_RERANKER = os.getenv("ENABLE_RERANKER", "true").lower() == "true"
+RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 TOP_K_DENSE = 15
 TOP_K_SPARSE = 15
 TOP_K_FUSED = 15
-TOP_K_FINAL = 6  # after reranking, what we hand to the agents
+TOP_K_FINAL = 6  # after reranking (or after fusion, if reranker disabled), what we hand to the agents
 
 
 class HybridRetriever:
@@ -62,9 +76,15 @@ class HybridRetriever:
 
     def build_chroma(self) -> None:
         self._chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-        embed_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=EMBEDDING_MODEL
-        )
+        # ChromaDB's own default embedding function (onnxruntime-based,
+        # bundles a small MiniLM ONNX model) instead of
+        # SentenceTransformerEmbeddingFunction -- the latter imports
+        # sentence-transformers, which imports torch, adding several
+        # hundred MB of memory overhead just from the import itself, before
+        # any model weights load. Retrieval quality is comparable for this
+        # use case; the point is avoiding torch entirely for a step that
+        # runs on every request.
+        embed_fn = embedding_functions.DefaultEmbeddingFunction()
         # Recreate collection each time we rebuild the index, so stale
         # chunks never linger.
         try:
@@ -90,6 +110,10 @@ class HybridRetriever:
 
     def _load_reranker(self):
         if self._reranker is None:
+            # Deferred import -- torch/sentence-transformers are only ever
+            # pulled into memory if reranking is actually enabled and
+            # actually used, never at module import time.
+            from sentence_transformers import CrossEncoder
             self._reranker = CrossEncoder(RERANKER_MODEL)
         return self._reranker
 
@@ -130,10 +154,17 @@ class HybridRetriever:
 
         fused = self._reciprocal_rank_fusion(dense_ranked, sparse_ranked)[:TOP_K_FUSED]
 
-        # Rerank the fused candidates with a cross-encoder.
-        reranker = self._load_reranker()
-        pairs = [(query, chunk_by_id[cid].text) for cid, _ in fused]
-        rerank_scores = reranker.predict(pairs) if pairs else []
+        if ENABLE_RERANKER:
+            reranker = self._load_reranker()
+            pairs = [(query, chunk_by_id[cid].text) for cid, _ in fused]
+            rerank_scores = reranker.predict(pairs) if pairs else []
+        else:
+            # Memory-constrained deployments skip the cross-encoder stage
+            # entirely (see module docstring). Fall back to the fused
+            # dense+sparse ranking order directly -- lower precision than
+            # with reranking, but the fusion step still meaningfully
+            # improves over either signal alone.
+            rerank_scores = [score for _, score in fused]
 
         results = []
         for (chunk_id, fused_score), rerank_score in zip(fused, rerank_scores):
